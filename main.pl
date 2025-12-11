@@ -46,22 +46,31 @@ sub get_edits ($baseline, $features) {
     [ (map { "+$_" } keys %$required), (map { "-$_" } keys %$redundant) ]
 }
 
+my $use_x86_versions = 0;
+
 sub main (@argv) {
+    @argv = 'native' unless int @argv;
     my @models = @argv;
     my %model_features = map { $_ => array_to_set(get_cpu_features $_) } @models;
     my $common_features = set_intersection values %model_features;
 
-    my @baseline_models = qw/x86-64 x86-64-v2 x86-64-v3 x86-64-v4/;
-    my %baseline_features = map { $_ => array_to_set(get_cpu_features $_) } @baseline_models;
+    my @x86_models = qw/x86-64 x86-64-v2 x86-64-v3 x86-64-v4/;
+    my %x86_features = map { $_ => array_to_set(get_cpu_features $_) } @x86_models;
 
-    %model_features = (%model_features, %baseline_features);
+    my %baseline_model_features = do {
+        if ($use_x86_versions) {
+            (%x86_features);
+        } else {
+            (%model_features, %x86_features);
+        }
+    };
 
-    delete $model_features{native};
+    delete $baseline_model_features{native};
 
     my @edits =
     sort { int(@{ $a->[1] }) <=> int(@{ $b->[1] }) }
-    map { [ $_, get_edits($model_features{$_}, $common_features) ] }
-    keys %model_features;
+    map { [ $_, get_edits($baseline_model_features{$_}, $common_features) ] }
+    keys %baseline_model_features;
 
     my $winner = shift @edits;
     say join ",", $winner->[0], $winner->[1]->@*;
