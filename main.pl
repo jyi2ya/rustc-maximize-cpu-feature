@@ -40,6 +40,12 @@ sub set_size ($x) {
     int(keys %$x)
 }
 
+sub get_edits ($baseline, $features) {
+    my $required = set_difference($features, $baseline);
+    my $redundant = set_difference($baseline, $features);
+    [ (map { "+$_" } keys %$required), (map { "-$_" } keys %$redundant) ]
+}
+
 sub main (@argv) {
     my @models = @argv;
     my %model_features = map { $_ => array_to_set(get_cpu_features $_) } @models;
@@ -47,14 +53,18 @@ sub main (@argv) {
 
     my @baseline_models = qw/x86-64 x86-64-v2 x86-64-v3 x86-64-v4/;
     my %baseline_features = map { $_ => array_to_set(get_cpu_features $_) } @baseline_models;
-    my @baseline_candidates = grep {
-        set_size(set_intersection($baseline_features{$_}, $common_features)) == set_size($baseline_features{$_})
-        and set_size(set_union($baseline_features{$_}, $common_features)) == set_size($common_features)
-    } @baseline_models;
 
-    my $baseline = pop @baseline_candidates;
-    my $additional = set_difference($common_features, $baseline_features{$baseline});
-    say join ',', $baseline, sort { $a cmp $b } map { "+$_" } keys %$additional;
+    %model_features = (%model_features, %baseline_features);
+
+    delete $model_features{native};
+
+    my @edits =
+    sort { int(@{ $a->[1] }) <=> int(@{ $b->[1] }) }
+    map { [ $_, get_edits($model_features{$_}, $common_features) ] }
+    keys %model_features;
+
+    my $winner = shift @edits;
+    say join ",", $winner->[0], $winner->[1]->@*;
 }
 
 main @ARGV unless caller;
