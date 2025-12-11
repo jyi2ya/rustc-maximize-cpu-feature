@@ -73,7 +73,8 @@ sub main (@argv) {
     keys %baseline_model_features;
 
     my $winner = shift @edits;
-    say join ",", $winner->[0], $winner->[1]->@*;
+    say $winner->[0];
+    say join ",", $winner->[1]->@*;
 }
 
 main @ARGV unless caller;
