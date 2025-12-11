@@ -1,0 +1,73 @@
+=encoding utf8
+
+=head1 名称
+
+main.pl - 计算 Rust 编译器目标 CPU 特性的 Perl 脚本
+
+=head1 概要
+
+    perl main.pl [cpu_model...]
+
+例如：
+
+    perl main.pl native westmere skylake
+
+输出格式为：
+
+    baseline_model,additional_features
+
+=head1 描述
+
+该脚本用于在部署 Rust 程序时，确定支持多个 CPU 模型的最小公共特性集。通过比较给定的 CPU 模型名称，脚本会推荐一个基准模型（如 x86-64-v2）和额外的 CPU 特性，以便在 Rust 编译时使用，从而优化性能。
+
+脚本基于 Rust 编译器（rustc）的 `--print cfg` 功能来获取每个 CPU 模型支持的特性。它计算所有输入模型的公共特性，然后与预定义的基准模型（x86-64、x86-64-v2、x86-64-v3、x86-64-v4）进行比较，选择最匹配的基准模型，并列出超出基准的额外特性。
+
+在优化 Rust 构建时，使用 `-C target-cpu=native` 可以启用本地 CPU 的所有特性，但跨机器部署时需要确保兼容性。本脚本可以找到多个机器之间的共性。
+
+=head1 依赖
+
+=over 4
+
+=item * Perl 5.36 或更高版本
+
+=item * Rust 编译器 (rustc) 可用
+
+=item * Perl 模块: List::Util
+
+=back
+
+=head1 示例
+
+基本用法：
+
+    perl main.pl native westmere skylake
+
+输出示例：
+
+    x86-64-v2,+aes
+
+另一个示例，使用具体模型：
+
+    perl main.pl skylake skylake-avx512
+
+输出为：
+
+    x86-64-v3,+adx,+aes,+ermsb,+pclmulqdq,+prfchw,+rdrand,+rdseed,+xsavec,+xsaveopt,+xsaves
+
+获取远程机器模型名称的辅助脚本示例：
+
+    ./get-remote-machine-model-name.sh 127.0.0.1
+
+可能输出：
+
+    westmere
+
+=head1 参考链接
+
+=over 4
+
+=item * Rust 相关问题: L<https://github.com/rust-lang/rust/issues/80633>
+
+=item * 相关工具: L<https://github.com/hartwork/resolve-march-native>
+
+=back
